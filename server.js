@@ -25,12 +25,11 @@ Notes:
 - This is a focused POC. In production add authentication, rate limiting, robust error handling and logging, request validation, and input sanitization.
 */
 
-import express from "express";
-import cors from "cors";
-import fetch from "node-fetch";
-import dotenv from "dotenv";
+const express = require("express");
+const cors = require("cors");
+const fetch = require("node-fetch");
+require("dotenv").config();
 
-dotenv.config();
 const app = express();
 
 app.use(cors());
@@ -39,10 +38,10 @@ app.use(express.json());
 // -----------------------------
 // CONFIG
 // -----------------------------
-const LLM_PROVIDER = process.env.LLM_PROVIDER || "azure";  // <-- set to 'azure'
-const AZURE_OPENAI_ENDPOINT = process.env.AZURE_OPENAI_ENDPOINT; 
-const AZURE_OPENAI_KEY = process.env.OPENAI_API_KEY;       // Azure key
-const AZURE_MODEL_DEPLOYMENT = process.env.AZURE_MODEL_DEPLOYMENT; // e.g. "gpt-4o-mini"
+const LLM_PROVIDER = process.env.LLM_PROVIDER || "azure";
+const AZURE_OPENAI_ENDPOINT = process.env.AZURE_OPENAI_ENDPOINT;
+const AZURE_OPENAI_KEY = process.env.OPENAI_API_KEY;
+const AZURE_MODEL_DEPLOYMENT = process.env.AZURE_MODEL_DEPLOYMENT;
 const PORT = process.env.PORT || 5000;
 
 // -----------------------------
@@ -58,14 +57,13 @@ app.post("/api/chat", async (req, res) => {
 
         if (!AZURE_OPENAI_ENDPOINT || !AZURE_OPENAI_KEY || !AZURE_MODEL_DEPLOYMENT) {
             return res.status(500).json({
-                error: "Missing environment variables. Required: AZURE_OPENAI_ENDPOINT, OPENAI_API_KEY, AZURE_MODEL_DEPLOYMENT"
+                error:
+                    "Missing env vars: AZURE_OPENAI_ENDPOINT, OPENAI_API_KEY, AZURE_MODEL_DEPLOYMENT"
             });
         }
 
-        // Azure-specific URL
         const url = `${AZURE_OPENAI_ENDPOINT}/openai/deployments/${AZURE_MODEL_DEPLOYMENT}/chat/completions?api-version=2024-02-01`;
 
-        // Azure call
         const response = await fetch(url, {
             method: "POST",
             headers: {
@@ -101,4 +99,3 @@ app.post("/api/chat", async (req, res) => {
 // START SERVER
 // -----------------------------
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
-
