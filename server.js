@@ -61,7 +61,7 @@ app.post("/api/chat", async (req, res) => {
       });
     }
 
-    const url = `${AZURE_OPENAI_ENDPOINT}/openai/deployments/${AZURE_MODEL_DEPLOYMENT}/chat/completions?api-version=2024-02-01`;
+    const url = `${AZURE_OPENAI_ENDPOINT}/openai/deployments/${AZURE_MODEL_DEPLOYMENT}/chat/completions?api-version=2025-01-01-preview`;
 
     const response = await fetch(url, {
       method: "POST",
@@ -98,5 +98,6 @@ app.post("/api/chat", async (req, res) => {
 // START SERVER
 // -----------------------------
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+
 
 
