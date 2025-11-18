@@ -1,17 +1,32 @@
 import express from "express";
 import cors from "cors";
-import fetch from "node-fetch";
 import dotenv from "dotenv";
 
 dotenv.config();
 
 const app = express();
-app.use(cors());
 app.use(express.json());
 
+// CORRECT CORS for Azure DevOps extension
+app.use(
+  cors({
+    origin: [
+      "*",
+      "https://dev.azure.com",
+      "https://*.visualstudio.com",
+      "https://anjalimusmade.gallery.vsassets.io"
+    ],
+    methods: ["GET", "POST", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"]
+  })
+);
+
+app.options("*", cors());
+
+// LOAD ENV VARIABLES
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
-const AZDO_PAT = process.env.AZDO_PAT; 
-const ORG = process.env.AZDO_ORG;       
+const AZDO_PAT = process.env.AZDO_PAT;
+const ORG = process.env.AZDO_ORG;
 const PROJECT = process.env.AZDO_PROJECT;
 const PIPELINE_ID = process.env.AZDO_PIPELINE_ID;
 
@@ -22,16 +37,18 @@ app.post("/api/ai", async (req, res) => {
   try {
     const { prompt } = req.body;
 
-    if (!prompt)
+    if (!prompt) {
       return res.status(400).json({ error: "No prompt provided" });
+    }
 
-    console.log("🔵 Prompt:", prompt);
+    console.log("🔵 Incoming Prompt:", prompt);
 
     // ---------------------------------------------------------
-    // Detect /specify.* command and run AZDO PIPELINE instead
+    // Detect /specify.* — trigger Azure DevOps Pipeline
     // ---------------------------------------------------------
     if (prompt.startsWith("/specify.")) {
       const step = prompt.split(".")[1];
+      console.log("🚀 Triggering pipeline step:", step);
 
       const url = `https://dev.azure.com/${ORG}/${PROJECT}/_apis/pipelines/${PIPELINE_ID}/runs?api-version=7.1-preview.1`;
 
@@ -46,9 +63,7 @@ app.post("/api/ai", async (req, res) => {
         }
       };
 
-      console.log("🚀 Triggering Azure Pipeline for step:", step);
-
-      const runResp = await fetch(url, {
+      const resp = await fetch(url, {
         method: "POST",
         headers: {
           "Authorization": "Basic " + Buffer.from(":" + AZDO_PAT).toString("base64"),
@@ -57,17 +72,27 @@ app.post("/api/ai", async (req, res) => {
         body: JSON.stringify(body)
       });
 
-      const runData = await runResp.json();
+      const data = await resp.json().catch(() => ({}));
+
+      if (!resp.ok) {
+        console.error("❌ Pipeline error:", data);
+        return res.status(500).json({
+          error: "Pipeline failed",
+          details: data
+        });
+      }
 
       return res.json({
         output: `Pipeline triggered for step: ${step}`,
-        pipelineRunId: runData?.id || null
+        pipelineRunId: data?.id || null
       });
     }
 
     // ---------------------------------------------------------
-    // Otherwise: normal OpenRouter AI prompt
+    // Otherwise send prompt to OpenRouter AI
     // ---------------------------------------------------------
+    console.log("🤖 Sending to OpenRouter...");
+
     const aiResp = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -80,18 +105,28 @@ app.post("/api/ai", async (req, res) => {
       })
     });
 
-    const aiData = await aiResp.json();
-    const text = aiData?.choices?.[0]?.message?.content || "";
+    const aiData = await aiResp.json().catch(() => ({}));
 
-    res.json({ output: text });
+    if (!aiResp.ok) {
+      console.error("❌ OpenRouter error:", aiData);
+      return res.status(500).json({
+        error: "OpenRouter request failed",
+        details: aiData
+      });
+    }
+
+    const output = aiData?.choices?.[0]?.message?.content || "";
+    console.log("✅ AI Response OK");
+
+    return res.json({ output });
 
   } catch (err) {
-    console.error("❌ Error:", err);
-    res.status(500).json({ error: err.message });
+    console.error("🔥 SERVER CRASH:", err);
+    return res.status(500).json({ error: err.message });
   }
 });
 
 // =============================================================
 app.listen(process.env.PORT || 5000, () => {
-  console.log("🚀 Speckit AI Proxy (correct version) running");
+  console.log("🚀 Speckit AI Proxy running on Render");
 });
