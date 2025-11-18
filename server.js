@@ -8,18 +8,11 @@ const app = express();
 app.use(express.json());
 
 // CORRECT CORS for Azure DevOps extension
-app.use(
-  cors({
-    origin: [
-      "*",
-      "https://dev.azure.com",
-      "https://*.visualstudio.com",
-      "https://anjalimusmade.gallery.vsassets.io"
-    ],
-    methods: ["GET", "POST", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"]
-  })
-);
+app.use(cors({
+  origin: "*",       // allow all for testing
+  methods: ["POST"],  // only POST allowed
+  allowedHeaders: ["Content-Type", "Authorization"]
+}));
 
 app.options("*", cors());
 
@@ -130,3 +123,4 @@ app.post("/api/ai", async (req, res) => {
 app.listen(process.env.PORT || 5000, () => {
   console.log("🚀 Speckit AI Proxy running on Render");
 });
+
