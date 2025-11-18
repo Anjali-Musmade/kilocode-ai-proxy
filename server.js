@@ -27,7 +27,6 @@ Notes:
 
 const express = require("express");
 const cors = require("cors");
-const fetch = require("node-fetch");
 require("dotenv").config();
 
 const app = express();
@@ -48,54 +47,56 @@ const PORT = process.env.PORT || 5000;
 // CHAT COMPLETION ENDPOINT
 // -----------------------------
 app.post("/api/chat", async (req, res) => {
-    const { messages } = req.body;
+  const { messages } = req.body;
 
-    try {
-        if (LLM_PROVIDER !== "azure") {
-            return res.status(400).json({ error: "Set LLM_PROVIDER=azure" });
-        }
-
-        if (!AZURE_OPENAI_ENDPOINT || !AZURE_OPENAI_KEY || !AZURE_MODEL_DEPLOYMENT) {
-            return res.status(500).json({
-                error:
-                    "Missing env vars: AZURE_OPENAI_ENDPOINT, OPENAI_API_KEY, AZURE_MODEL_DEPLOYMENT"
-            });
-        }
-
-        const url = `${AZURE_OPENAI_ENDPOINT}/openai/deployments/${AZURE_MODEL_DEPLOYMENT}/chat/completions?api-version=2024-02-01`;
-
-        const response = await fetch(url, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "api-key": AZURE_OPENAI_KEY
-            },
-            body: JSON.stringify({
-                messages,
-                max_tokens: 2000,
-                temperature: 0.7,
-                stream: false
-            })
-        });
-
-        const result = await response.json();
-
-        if (!response.ok) {
-            console.error("Azure Error:", result);
-            return res.status(500).json({ error: result });
-        }
-
-        res.json({
-            reply: result.choices?.[0]?.message?.content || ""
-        });
-
-    } catch (err) {
-        console.error("SERVER ERROR:", err);
-        res.status(500).json({ error: err.message });
+  try {
+    if (LLM_PROVIDER !== "azure") {
+      return res.status(400).json({ error: "Set LLM_PROVIDER=azure" });
     }
+
+    if (!AZURE_OPENAI_ENDPOINT || !AZURE_OPENAI_KEY || !AZURE_MODEL_DEPLOYMENT) {
+      return res.status(500).json({
+        error:
+          "Missing env vars: AZURE_OPENAI_ENDPOINT, OPENAI_API_KEY, AZURE_MODEL_DEPLOYMENT"
+      });
+    }
+
+    const url = `${AZURE_OPENAI_ENDPOINT}/openai/deployments/${AZURE_MODEL_DEPLOYMENT}/chat/completions?api-version=2024-02-01`;
+
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "api-key": AZURE_OPENAI_KEY
+      },
+      body: JSON.stringify({
+        messages,
+        max_tokens: 2000,
+        temperature: 0.7,
+        stream: false
+      })
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      console.error("Azure Error:", result);
+      return res.status(500).json({ error: result });
+    }
+
+    res.json({
+      reply: result.choices?.[0]?.message?.content || ""
+    });
+
+  } catch (err) {
+    console.error("SERVER ERROR:", err);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // -----------------------------
 // START SERVER
 // -----------------------------
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+
+
